@@ -19,6 +19,9 @@ package com.example.jetcaster.ui.home
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import com.example.jetcaster.core.data.database.model.EpisodeToPodcast
 import com.example.jetcaster.core.data.repository.EpisodeStore
 import com.example.jetcaster.core.data.repository.PodcastStore
@@ -34,6 +37,7 @@ import com.example.jetcaster.core.model.asExternalModel
 import com.example.jetcaster.core.model.asPodcastToEpisodeInfo
 import com.example.jetcaster.core.player.EpisodePlayer
 import com.example.jetcaster.core.player.model.PlayerEpisode
+import com.example.jetcaster.ui.workers.YouTubeSearchWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.collections.immutable.PersistentList
@@ -58,7 +62,9 @@ class HomeViewModel @Inject constructor(
     private val podcastCategoryFilterUseCase: PodcastCategoryFilterUseCase,
     private val filterableCategoriesUseCase: FilterableCategoriesUseCase,
     private val episodePlayer: EpisodePlayer,
+    private val workManager: WorkManager // Inyectamos WorkManager
 ) : ViewModel() {
+
     // Holds our currently selected podcast in the library
     private val selectedLibraryPodcast = MutableStateFlow<PodcastInfo?>(null)
     // Holds our currently selected home category
@@ -71,6 +77,7 @@ class HomeViewModel @Inject constructor(
     private val _state = MutableStateFlow<HomeScreenUiState>(HomeScreenUiState.Loading)
     // Holds the view state if the UI is refreshing for new data
     private val refreshing = MutableStateFlow(false)
+
 
     private val subscribedPodcasts = podcastStore.followedPodcastsSortedByLastEpisode(limit = 10)
         .shareIn(viewModelScope, SharingStarted.WhileSubscribed())
@@ -136,7 +143,6 @@ class HomeViewModel @Inject constructor(
 
         refresh(force = false)
     }
-
     fun refresh(force: Boolean = true) {
         viewModelScope.launch {
             runCatching {
@@ -176,6 +182,16 @@ class HomeViewModel @Inject constructor(
     fun onQueueEpisode(episode: PlayerEpisode) {
         episodePlayer.addToQueue(episode)
     }
+
+    // Función que encola la búsqueda de videos
+    fun encolarBusqueda(query: String) {
+        val workRequest = OneTimeWorkRequestBuilder<YouTubeSearchWorker>()
+            .setInputData(workDataOf("query" to query))
+            .build()
+
+        // Encolamos el trabajo
+        workManager.enqueue(workRequest)
+    }
 }
 
 private fun List<EpisodeToPodcast>.asLibrary(): LibraryInfo =
@@ -205,3 +221,4 @@ sealed interface HomeScreenUiState {
         val library: LibraryInfo = LibraryInfo(),
     ) : HomeScreenUiState
 }
+

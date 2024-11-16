@@ -103,6 +103,16 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.palette)
 
+    // Retrofit para consumir la API
+    implementation (libs.retrofit)
+    implementation (libs.converter.gson)
+
+    // WorkManager para ejecutar tareas en segundo plano
+    implementation (libs.androidx.work.runtime.ktx)
+
+    // Gson para la serialización de respuestas JSON
+    implementation (libs.gson)
+
     // Dependency injection
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.hilt.android)
